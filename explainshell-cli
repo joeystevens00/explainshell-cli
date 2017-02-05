@@ -31,7 +31,7 @@ function hasExpansion() {
 
 function prettyPrintCommandSections() {
 	input="$1"
-	input=$(echo -e "$input" | tr -d '\n' | fold -sw "$outputwidth")
+	input=$(echo -e "$input" | sed 's/\n//2' | fold -sw "$outputwidth")
 	first=true
 
 	for i in $(echo -e "$input"); do
