@@ -7,5 +7,7 @@ CLI for explainshell.com
 
 ### Requirements
 [pup](https://github.com/ericchiang/pup)  
-curl
+curl  
+toilet   
+jq
 
