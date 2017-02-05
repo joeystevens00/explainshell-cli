@@ -1,0 +1,46 @@
+#!/bin/bash
+# AUTHOR: Joey Stevens
+# Description: Parses explainshell.com and prettifies for CLI output
+# Usage: First command line argument should be the command to examine
+#        e.g explainshell-cli "grep -ioP"
+cmd="$1"
+
+IFS=$'\n'
+bold=$(tput bold)
+normal=$(tput sgr0)
+indent_one="\t"
+indent_two="\t\t"
+
+
+function translateNonSaneCharacters() {
+	input="$1"
+	output=$(echo -e "$input" | sed "s/Â´/'/g")
+	echo "$output"
+}
+
+function prettyPrintCommandSections() {
+	input="$1"
+	first=true
+
+	for i in $(echo -e "$input"); do
+		if [ $first ]; then
+			echo -e "$indent_one ${bold}$i${normal}"
+			unset first
+		else
+			echo -e "$indent_two $i"
+		fi
+	done
+}
+
+resp=$(curl -s "http://explainshell.com/explain?cmd=$cmd")
+ids=$(echo -e "$resp"| pup -c 'pre.help-box json{}' | jq -r ".[] | .id")
+for id in $(echo -e "$ids"); do 
+	command_name=$(echo -e "$resp" | pup -p "span[helpref=$id] text{}")
+	command_help=$(echo -e "$resp" | pup -p "#$id text{}" |  tr -d '\n')
+	command_help=$(echo -e "$command_help" | tr -d '\n' | sed -e 's/    /\n/g')
+	if [[ "$id" == "help-0" ]]; then 
+		echo "${bold}$command_name${normal} $command_help"
+	else 
+		prettyPrintCommandSections "$command_help"
+	fi
+done
