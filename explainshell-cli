@@ -27,7 +27,7 @@ function translateNonSaneCharacters() {
 }
 
 function toiletify(){
-	echo "$1" | toilet -f term -F border
+	echo "$1" | toilet -f term --gay
 }
 
 function prettyPrintCommandSections() {
