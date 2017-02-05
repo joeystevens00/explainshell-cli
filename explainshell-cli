@@ -26,8 +26,15 @@ function translateNonSaneCharacters() {
 	echo "$output"
 }
 
-function toiletify(){
-	echo "$1" | toilet -f term --gay
+function toCenter() {
+	if [ "$1" ]; then
+		text="$1"
+	else
+		while read pipe; do
+			text="$pipe"
+		done
+	fi
+	printf "%*s\n" $(( (${#text} + term_width) / 2)) "$text"
 }
 
 function prettyPrintCommandSections() {
@@ -37,21 +44,19 @@ function prettyPrintCommandSections() {
 	firstCommandLine="$4"
 	name=$(echo -e "$name" | sed 's/\n//2' | fold -sw "$outputwidth")
 	command_to_print=$(echo -e "$command_to_print" | sed 's/\n//2' | fold -sw "$outputwidth")
-	
-	if [ "$programName" ]; then 
-		echo -n "${bold}$name${normal} "
+	if [ "$programName" ] && [ $((outputwidth)) -gt $((${#command_to_print}+${#name})) ]; then 
+			echo -n "${bold}$name${normal} "
 	else
 		echo -e "$indent_one ${bold}$name${normal}"
 	fi
 	for i in $(echo -e "$command_to_print"); do
-		i=$(echo $i | sed 's/^   //g')
-		if [ "$firstCommandLine" ]; then
+		i=$(echo -e "$i" | sed 's/^   //g')
+		if [ "$firstCommandLine" ] && [ $((outputwidth)) -gt $((${#command_to_print}+${#name})) ]; then
 			echo -e "$i"
 		else
 			echo -e "$indent_two $i"
 		fi
-	done
-
+	done 
 }
 
 function fixNewLines() {
@@ -66,11 +71,11 @@ function explainshell() {
 
 	programName=true
 	firstCommandLine=true
-	toiletify "${bold}${underline}$cmd${normal}"
+	toCenter "${bold}${underline}$cmd${normal}"
 	for id in $(echo -e "$ids"); do 
 		command_name=$(echo -e "$resp" | pup -p "span[helpref=$id] text{}")
 		command_name=$(fixNewLines "$command_name")
-		command_help=$(echo -e "$resp" | pup -p "#$id json{}" | jq -r ".[] | .text" )
+		command_help=$(echo -e "$resp"| pup -p "#$id text{}") 
 		command_help=$(fixNewLines "$command_help")
 		prettyPrintCommandSections "$command_name" "$command_help" "$programName" "$firstCommandLine"
 		if [ "$firstCommandLine" ]; then unset firstCommandLine; fi
