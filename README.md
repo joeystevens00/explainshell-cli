@@ -6,6 +6,6 @@ CLI for explainshell.com
 ![ss](http://i.imgur.com/NMHkoaT.png)
 
 ### Requirements
-[pup](https://github.com/ericchiang/pup)
+[pup](https://github.com/ericchiang/pup)  
 curl
 
