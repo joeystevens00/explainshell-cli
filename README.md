@@ -1,5 +1,9 @@
 # explainshell-cli
 CLI for explainshell.com 
 
-## Usage
+### Usage
 ./explainshell-cli "nmap -p 1-65535 -sV -sS -T4 localhost"  
+
+### Requirements
+[pup](https://github.com/ericchiang/pup)  
+curl
