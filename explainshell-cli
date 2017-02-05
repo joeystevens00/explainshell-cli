@@ -3,46 +3,55 @@
 # Description: Parses explainshell.com and prettifies for CLI output
 # Usage: First command line argument should be the command to examine
 #        e.g explainshell-cli "grep -ioP"
-cmd="$1"
 
-IFS=$'\n'
-bold=$(tput bold)
-normal=$(tput sgr0)
-indent_one="\t"
-indent_two="\t\t"
-term_width=$(tput cols)
-if [ $term_width -gt 120 ]; then
-	outputwidth=$(($term_width-40))
-else
-	outputwidth=$((term_width-25))
-fi
+init_vars() {
+	IFS=$'\n'
+	bold=$(tput bold)
+	normal=$(tput sgr0)
+	indent_one="\t"
+	indent_two="\t\t"
+	indent_three="\t\t\t"
+	term_width=$(tput cols)
+	if [ $term_width -gt 120 ]; then
+		outputwidth=$(($term_width-40))
+	else
+		outputwidth=$((term_width-25))
+	fi
+}
 
 function translateNonSaneCharacters() {
+	# TODO
 	input="$1"
 	output=$(echo -e "$input" | sed "s/Â´/'/g")
 	echo "$output"
 }
 
-function hasExpansion() {
-	input="$1"
-	expansion=$(echo -e "$input"| pup -p '.hasexpansion')
-	if [ -n "$expansion" ]; then echo "true"; fi
+function toiletify(){
+	echo "$1" | toilet -f term -F border
 }
 
 function prettyPrintCommandSections() {
-	input="$1"
-	input=$(echo -e "$input" | sed 's/\n//2' | fold -sw "$outputwidth")
-	first=true
-
-	for i in $(echo -e "$input"); do
+	command_to_print="$2"
+	name="$1"
+	programName="$3"
+	firstCommandLine="$4"
+	name=$(echo -e "$name" | sed 's/\n//2' | fold -sw "$outputwidth")
+	command_to_print=$(echo -e "$command_to_print" | sed 's/\n//2' | fold -sw "$outputwidth")
+	
+	if [ "$programName" ]; then 
+		echo -n "${bold}$name${normal} "
+	else
+		echo -e "$indent_one ${bold}$name${normal}"
+	fi
+	for i in $(echo -e "$command_to_print"); do
 		i=$(echo $i | sed 's/^   //g')
-		if [ $first ]; then
-			echo -e "$indent_one ${bold}$i${normal}"
-			unset first
+		if [ "$firstCommandLine" ]; then
+			echo -e "$i"
 		else
 			echo -e "$indent_two $i"
 		fi
 	done
+
 }
 
 function fixNewLines() {
@@ -50,22 +59,25 @@ function fixNewLines() {
 	echo -e "$input" | tr -d '\n' | sed -e 's/    /\n/g'
 }
 
-resp=$(curl -s "http://explainshell.com/explain?cmd=$cmd")
-ids=$(echo -e "$resp"| pup -p 'pre.help-box json{}' | jq -r ".[] | .id")
-for id in $(echo -e "$ids"); do 
-	command_name=$(echo -e "$resp" | pup -p "span[helpref=$id] text{}")
-	command_name=$(fixNewLines "$command_name")
-	command_help=$(echo -e "$resp" | pup -p "#$id text{}")
-	command_help=$(fixNewLines "$command_help")
-	if [[ "$id" == "help-0" ]]; then 
-		containsExpansion=$(hasExpansion "$resp")
-		if [ "$containsExpansion" ]; then 
-			echo "${bold}$command_name${normal}"
-			prettyPrintCommandSections "$command_help"
-		else
-			echo "${bold}$command_name${normal} $command_help"
-		fi
-	else 
-		prettyPrintCommandSections "$command_help"
-	fi
-done
+function explainshell() {
+	cmd="$1"
+	resp=$(curl -s "http://explainshell.com/explain?cmd=$cmd")
+	ids=$(echo -e "$resp"| pup -p 'pre.help-box json{}' | jq -r ".[] | .id")
+
+	programName=true
+	firstCommandLine=true
+	toiletify "${bold}${underline}$cmd${normal}"
+	for id in $(echo -e "$ids"); do 
+		command_name=$(echo -e "$resp" | pup -p "span[helpref=$id] text{}")
+		command_name=$(fixNewLines "$command_name")
+		command_help=$(echo -e "$resp" | pup -p "#$id json{}" | jq -r ".[] | .text" )
+		command_help=$(fixNewLines "$command_help")
+		prettyPrintCommandSections "$command_name" "$command_help" "$programName" "$firstCommandLine"
+		if [ "$firstCommandLine" ]; then unset firstCommandLine; fi
+		if [ "$programName" ]; then unset  programName; fi
+	done
+}
+
+
+init_vars
+explainshell "$1"
