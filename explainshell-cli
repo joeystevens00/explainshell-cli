@@ -63,7 +63,6 @@ for id in $(echo -e "$ids"); do
 			echo "${bold}$command_name${normal}"
 			prettyPrintCommandSections "$command_help"
 		else
-			echo "false"
 			echo "${bold}$command_name${normal} $command_help"
 		fi
 	else 
