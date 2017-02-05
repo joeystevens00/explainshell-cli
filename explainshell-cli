@@ -10,7 +10,12 @@ bold=$(tput bold)
 normal=$(tput sgr0)
 indent_one="\t"
 indent_two="\t\t"
-
+term_width=$(tput cols)
+if [ $term_width -gt 120 ]; then
+	outputwidth=$(($term_width-40))
+else
+	outputwidth=$((term_width-25))
+fi
 
 function translateNonSaneCharacters() {
 	input="$1"
@@ -18,11 +23,19 @@ function translateNonSaneCharacters() {
 	echo "$output"
 }
 
+function hasExpansion() {
+	input="$1"
+	expansion=$(echo -e "$input"| pup -p '.hasexpansion')
+	if [ -n "$expansion" ]; then echo "true"; fi
+}
+
 function prettyPrintCommandSections() {
 	input="$1"
+	input=$(echo -e "$input" | tr -d '\n' | fold -sw "$outputwidth")
 	first=true
 
 	for i in $(echo -e "$input"); do
+		i=$(echo $i | sed 's/^   //g')
 		if [ $first ]; then
 			echo -e "$indent_one ${bold}$i${normal}"
 			unset first
@@ -32,14 +45,27 @@ function prettyPrintCommandSections() {
 	done
 }
 
+function fixNewLines() {
+	input="$1"
+	echo -e "$input" | tr -d '\n' | sed -e 's/    /\n/g'
+}
+
 resp=$(curl -s "http://explainshell.com/explain?cmd=$cmd")
-ids=$(echo -e "$resp"| pup -c 'pre.help-box json{}' | jq -r ".[] | .id")
+ids=$(echo -e "$resp"| pup -p 'pre.help-box json{}' | jq -r ".[] | .id")
 for id in $(echo -e "$ids"); do 
 	command_name=$(echo -e "$resp" | pup -p "span[helpref=$id] text{}")
-	command_help=$(echo -e "$resp" | pup -p "#$id text{}" |  tr -d '\n')
-	command_help=$(echo -e "$command_help" | tr -d '\n' | sed -e 's/    /\n/g')
+	command_name=$(fixNewLines "$command_name")
+	command_help=$(echo -e "$resp" | pup -p "#$id text{}")
+	command_help=$(fixNewLines "$command_help")
 	if [[ "$id" == "help-0" ]]; then 
-		echo "${bold}$command_name${normal} $command_help"
+		containsExpansion=$(hasExpansion "$resp")
+		if [ "$containsExpansion" ]; then 
+			echo "${bold}$command_name${normal}"
+			prettyPrintCommandSections "$command_help"
+		else
+			echo "false"
+			echo "${bold}$command_name${normal} $command_help"
+		fi
 	else 
 		prettyPrintCommandSections "$command_help"
 	fi
