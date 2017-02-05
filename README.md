@@ -8,6 +8,5 @@ CLI for explainshell.com
 ### Requirements
 [pup](https://github.com/ericchiang/pup)  
 curl  
-toilet   
 jq
 
